@@ -1,5 +1,4 @@
 use ash::vk;
-use nalgebra::{Isometry3, Matrix4, Rotation3, Translation, Vector3};
 use std::sync::Arc;
 use magma_renderer::core::*;
 

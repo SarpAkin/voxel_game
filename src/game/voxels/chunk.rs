@@ -1,6 +1,6 @@
 use std::{collections::HashMap, ops::Add, sync::Mutex};
 
-use nalgebra::Vector3;
+use glam::Vec3;
 use specs::prelude::*;
 
 use crate::game::Game;
@@ -11,8 +11,8 @@ pub const CHUNK_SIZE: usize = 32;
 pub const CHUNK_AREA: usize = CHUNK_SIZE * CHUNK_SIZE;
 pub const CHUNK_VOLUME: usize = CHUNK_SIZE * CHUNK_SIZE * CHUNK_SIZE;
 
-pub fn chunk_to_world_pos([cx, cy, cz]: [i32; 3]) -> Vector3<f32> {
-    Vector3::new((cx * CHUNK_SIZE as i32) as f32, (cy * CHUNK_SIZE as i32) as f32, (cz * CHUNK_SIZE as i32) as f32)
+pub fn chunk_to_world_pos([cx, cy, cz]: [i32; 3]) -> Vec3 {
+    Vec3::new((cx * CHUNK_SIZE as i32) as f32, (cy * CHUNK_SIZE as i32) as f32, (cz * CHUNK_SIZE as i32) as f32)
 }
 
 pub struct ChunkComponent {
@@ -52,7 +52,7 @@ impl<'a> ChunkRef<'a> {
     }
 
     pub fn chunk_pos(&self) -> [i32; 3] { self.cpos }
-    pub fn world_pos(&self) -> Vector3<f32> { chunk_to_world_pos(self.cpos) }
+    pub fn world_pos(&self) -> Vec3 { chunk_to_world_pos(self.cpos) }
 
     pub fn empty() -> ChunkRef<'static> { ChunkRef { voxel_ref: &empty_voxels, cpos: [i32::MIN; 3] } }
 }

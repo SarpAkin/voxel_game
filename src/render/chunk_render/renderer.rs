@@ -3,7 +3,7 @@ use std::sync::Arc;
 use ash::vk;
 use bytemuck::{Pod, Zeroable};
 use magma_renderer::core::*;
-use nalgebra::{Matrix4, Vector3};
+use glam::*;
 use specs::prelude::*;
 
 use crate::{
@@ -43,8 +43,8 @@ impl RenderData {
         cmd.bind_descriptor_set(0, self.set);
     }
 
-    fn draw_chunk(&self, cmd: &mut CommandBuffer, mesh: &ChunkMesh, mvp: &Matrix4<f32>) {
-        cmd.push_constant(&Push { mvp: mvp.data.0 }, vk::ShaderStageFlags::VERTEX, 0);
+    fn draw_chunk(&self, cmd: &mut CommandBuffer, mesh: &ChunkMesh, mvp: &Mat4) {
+        cmd.push_constant(&Push { mvp: mvp.to_cols_array_2d() }, vk::ShaderStageFlags::VERTEX, 0);
         cmd.bind_vertex_buffers(&[&mesh.verticies]);
         unsafe {
             cmd.device().cmd_draw_indexed(cmd.inner(), mesh.verticies.size() / 4 * 6, 1, 0, 0, 0);
@@ -73,7 +73,7 @@ impl<'a> System<'a> for Renderer {
         for (c, m) in (&chunks, &meshes).join() {
             let [x, y, z] = c.chunkpos;
 
-            let mvp = cam.proj_view * Matrix4::new_translation(&(Vector3::new(x as f32, y as f32, z as f32) * 32.0));
+            let mvp = cam.proj_view * Mat4::from_translation(Vec3::new(x as f32, y as f32, z as f32) * 32.0);
 
             render_data.draw_chunk(&mut cmd, m, &mvp);
         }

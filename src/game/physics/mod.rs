@@ -1,6 +1,6 @@
 use std::mem::swap;
 
-use nalgebra::{Point3, Vector3};
+use glam::*;
 use specs::prelude::*;
 
 use self::ray::Ray;
@@ -13,12 +13,12 @@ use super::{
 pub mod ray;
 
 pub struct Collider {
-    pub box_size: Vector3<f32>,
+    pub box_size: Vec3,
 }
 
 pub struct AABB {
-    pub begin: Point3<f32>,
-    pub end: Point3<f32>,
+    pub begin: Vec3,
+    pub end: Vec3,
 }
 
 impl Collider {
@@ -55,8 +55,8 @@ impl Component for Collider {
 
 #[derive(Default)]
 pub struct Velocity {
-    pub velocity: Vector3<f32>,
-    pub old_velocity: Vector3<f32>,
+    pub velocity: Vec3,
+    pub old_velocity: Vec3,
     pub mass: f32,
     pub affected_by_gravity: bool,
 }
@@ -66,7 +66,7 @@ impl Component for Velocity {
 }
 
 pub struct AddForce {
-    pub force: Vector3<f32>,
+    pub force: Vec3,
     pub duration: f32,
 }
 
@@ -80,12 +80,12 @@ impl Component for AddedForces {
 }
 
 impl AddedForces {
-    pub fn add_force(&mut self, force: Vector3<f32>, duration: f32) { self.forces.push(AddForce { force, duration }); }
-    pub fn calculate_added_velocity(&mut self, delta_time: f32, mass: f32) -> Vector3<f32> {
+    pub fn add_force(&mut self, force: Vec3, duration: f32) { self.forces.push(AddForce { force, duration }); }
+    pub fn calculate_added_velocity(&mut self, delta_time: f32, mass: f32) -> Vec3 {
         if self.forces.len() == 0 {
-            return Vector3::zeros();
+            return Vec3::ZERO;
         }
-        let mut added_velocity = Vector3::zeros();
+        let mut added_velocity = Vec3::ZERO;
         let inverse_mass = 1.0 / mass;
         for i in (self.forces.len() - 1)..=0 {
             let force = &mut self.forces[i];
@@ -137,11 +137,9 @@ impl<'a> System<'a> for VelocitySystem {
         let delta_time = delta_time.0 as f32;
 
         for (vel, t, collider) in (&mut velocities, &mut transforms, colliders.maybe()).join() {
-
             // let mut avarage_vel = (vel.old_velocity + vel.velocity) * 0.5;
             let mut avarage_vel = vel.velocity;
             let move_vec = avarage_vel * delta_time;
-
 
             let Some(collider) = collider else {
                 t.pos = t.pos + move_vec;
@@ -149,14 +147,14 @@ impl<'a> System<'a> for VelocitySystem {
             };
 
             let mut aabb = collider.to_aabb(t);
-            aabb.end += move_vec.map(|n| n.max(0.0));
-            aabb.begin += move_vec.map(|n| n.min(0.0));
+            aabb.end += move_vec.max(Vec3::ZERO);
+            aabb.begin += move_vec.min(Vec3::ZERO);
 
             let mut tile_colliders = Vec::<AABB>::new();
 
             //get near chunks tile boundry boxes
-            let beg_chunk = aabb.begin.map(|n| (n / CHUNK_SIZE as f32).floor() as i32);
-            let end_chunk = aabb.end.map(|n| (n / CHUNK_SIZE as f32).floor() as i32);
+            let beg_chunk = (aabb.begin / CHUNK_SIZE as f32).floor().as_ivec3();
+            let end_chunk = (aabb.end / CHUNK_SIZE as f32).floor().as_ivec3();
 
             for x in beg_chunk.x..=end_chunk.x {
                 for y in beg_chunk.y..=end_chunk.y {
@@ -171,7 +169,6 @@ impl<'a> System<'a> for VelocitySystem {
             let tmid_point = t.pos + half_size;
             let ray = Ray::new(tmid_point, move_vec);
 
-
             let mut ray_hits: Vec<_> = tile_colliders
                 .iter()
                 .enumerate()
@@ -185,16 +182,14 @@ impl<'a> System<'a> for VelocitySystem {
 
             for (_, i) in ray_hits {
                 let t_aabb = &tile_colliders[i as usize];
-                let extended_aabb = AABB { begin: t_aabb.begin - half_size , end: t_aabb.end + half_size };
+                let extended_aabb = AABB { begin: t_aabb.begin - half_size, end: t_aabb.end + half_size };
                 let updated_ray = Ray::new(tmid_point, avarage_vel * delta_time);
                 let Some(hit) = updated_ray.test_aabb(&extended_aabb, true) else{continue};
-                avarage_vel += hit.cn.component_mul(&(avarage_vel.abs() * (1.0 - hit.t)));
+                avarage_vel += hit.cn * avarage_vel.abs() * (1.0 - hit.t);
             }
 
             t.pos += avarage_vel * delta_time;
             vel.velocity = avarage_vel;
-
-
 
             // vel.velocity = vel.old_velocity + (avarage_vel - vel.old_velocity) * 2.0;
         }
@@ -206,22 +201,22 @@ impl<'a> ChunkRef<'a> {
         let chunk_world_pos = self.world_pos();
 
         let chunk_aabb = AABB {
-            begin: Point3::from(chunk_world_pos),
-            end: Point3::from(chunk_world_pos + Vector3::new(CHUNK_SIZE as f32, CHUNK_SIZE as f32, CHUNK_SIZE as f32)),
+            begin: chunk_world_pos,
+            end: chunk_world_pos + Vec3::splat(CHUNK_SIZE as f32),
         };
 
         if chunk_aabb.check_collision(aabb) == false {
             return;
         }
 
-        let relative_beg = (aabb.begin - chunk_world_pos).map(|n| n.max(0.0));
+        let relative_beg = (aabb.begin - chunk_world_pos).max(Vec3::ZERO);
         let relative_end = aabb.end - chunk_world_pos;
 
         for x in (relative_beg.x.floor() as usize)..=(relative_end.x.floor() as usize).min(CHUNK_SIZE - 1) {
             for y in (relative_beg.y.floor() as usize)..=(relative_end.y.floor() as usize).min(CHUNK_SIZE - 1) {
                 for z in (relative_beg.z.floor() as usize)..=(relative_end.z.floor() as usize).min(CHUNK_SIZE - 1) {
                     let tile = self.get_block(x, y, z);
-                    tile.append_colliders(chunk_world_pos + Vector3::new(x as f32, y as f32, z as f32), append_colliders);
+                    tile.append_colliders(chunk_world_pos + vec3(x as f32, y as f32, z as f32), append_colliders);
                 }
             }
         }
@@ -229,12 +224,12 @@ impl<'a> ChunkRef<'a> {
 }
 
 impl Tile {
-    pub fn append_colliders(&self, pos: Vector3<f32>, vec: &mut Vec<AABB>) {
+    pub fn append_colliders(&self, pos: Vec3, vec: &mut Vec<AABB>) {
         if self.properties().is_transparent {
             return;
         }
 
-        vec.push(AABB { begin: Point3::from(pos), end: Point3::from(pos + Vector3::new(1.0, 1.0, 1.0)) })
+        vec.push(AABB { begin: pos, end: pos + vec3(1.0, 1.0, 1.0) })
     }
 }
 

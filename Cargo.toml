@@ -12,10 +12,11 @@ eyre = "0.6.8"
 vk-shader-macros = "0.2.8"
 bytemuck = {version="1.12.1", features = ["derive"]}
 specs = "0.18.0"
-nalgebra = "0.31.2"
+# nalgebra = "0.31.2"
 winit = "0.27.2"
 rayon = "1.5.3"
 noise = "0.8.2"
+glam = "0.22.0"
 
 [profile.release]
 # strip = true  # Automatically strip symbols from the binary.

@@ -8,8 +8,8 @@ use std::{
 
 use ash::vk;
 use eyre::Result;
+use glam::*;
 use magma_renderer::{core::*, window::*};
-use nalgebra::{Isometry3, Matrix4, Point3, Rotation3, Vector3};
 use specs::prelude::*;
 use std::sync::mpsc::channel;
 
@@ -26,7 +26,7 @@ use super::render;
 pub struct DeltaTime(pub f64);
 
 pub struct Transform {
-    pub pos: Point3<f32>,
+    pub pos: Vec3,
     pub yaw: f32,
     pub pitch: f32,
 }
@@ -35,35 +35,33 @@ impl Component for Transform {
     type Storage = VecStorage<Self>;
 }
 
-fn _eular_from_vector(vec: Vector3<f32>) -> (f32, f32) {
+fn _eular_from_vector(vec: Vec3) -> (f32, f32) {
     let yaw = f32::atan2(vec.z, vec.x);
-    let pitch = f32::asin(vec.y / vec.magnitude());
+    let pitch = f32::asin(vec.y / vec.length());
     (yaw, pitch)
 }
 
 impl Transform {
-    pub fn new(x: f32, y: f32, z: f32) -> Transform { Self { pos: Point3::new(x, y, z), yaw: 0.0, pitch: 0.0 } }
+    pub fn new(x: f32, y: f32, z: f32) -> Transform { Self { pos: Vec3::new(x, y, z), yaw: 0.0, pitch: 0.0 } }
 
-    pub fn direction(&self) -> Vector3<f32> {
+    pub fn direction(&self) -> Vec3 {
         let pcos = self.pitch.cos();
 
         let x = self.yaw.cos() * pcos;
         let z = self.yaw.sin() * pcos;
         let y = self.pitch.sin();
 
-        Vector3::new(x, y, z)
+        Vec3::new(x, y, z)
     }
 
     pub fn matrix(
         &self,
-    ) -> nalgebra::Matrix<f32, nalgebra::Const<4>, nalgebra::Const<4>, nalgebra::ArrayStorage<f32, 4, 4>> {
+    ) -> Mat4 {
         // let iso = Isometry3::new(self.pos.coords, Vector3::zeros());
         // let a = Rotation3::from_euler_angles(0.0, self.pitch, self.yaw);
 
-        let mut m = Matrix4::from_euler_angles(0.0, self.pitch, self.yaw);
-        m[(0, 3)] += self.pos.x;
-        m[(1, 3)] += self.pos.y;
-        m[(2, 3)] += self.pos.z;
+        let mut m = Mat4::from_euler(EulerRot::XYZ,0.0, self.pitch, self.yaw);
+        *m.col_mut(3) += self.pos.extend(0.0);
         m
     }
 }
@@ -76,24 +74,30 @@ pub struct Camera {
 
 impl Camera {
     #[rustfmt::skip]
-    pub fn proj(&self, (width, height): (u32, u32)) -> Matrix4<f32> {
-        //https://vincent-p.github.io/posts/vulkan_perspective_matrix/
-
+    pub fn proj(&self, (width, height): (u32, u32)) -> Mat4 {
         let aspect_ratio = width as f32 / height as f32;
         let fov_rad = self.fovy.to_radians();
-        let focal_length = 1.0 / f32::tan(fov_rad / 2.0);
+        
+        let mut m = Mat4::perspective_rh(fov_rad, aspect_ratio, self.znear, self.zfar);
+        m.col_mut(1)[1] *= -1.0;
+        m
 
-        let x = focal_length / aspect_ratio;
-        let y = -focal_length;
-        let a = self.znear / (self.zfar - self.znear);
-        let b = self.zfar * a;
 
-        Matrix4::new(
-            x,  0.0, 0.0,   0.0, //
-            0.0,y,   0.0,   0.0, //
-            0.0,0.0,-1.0 - a,-b, //
-            0.0,0.0,-1.0,   0.0, //
-        )
+        // //https://vincent-p.github.io/posts/vulkan_perspective_matrix/
+
+        // let focal_length = 1.0 / f32::tan(fov_rad / 2.0);
+
+        // let x = focal_length / aspect_ratio;
+        // let y = -focal_length;
+        // let a = self.znear / (self.zfar - self.znear);
+        // let b = self.zfar * a;
+
+        // Matrix4::new(
+        //     x,  0.0, 0.0,   0.0, //
+        //     0.0,y,   0.0,   0.0, //
+        //     0.0,0.0,-1.0 - a,-b, //
+        //     0.0,0.0,-1.0,   0.0, //
+        // )
     }
 }
 
@@ -109,10 +113,9 @@ pub struct Game {
     // gpass: DeferedPass,
 }
 
-static UP: Vector3<f32> = Vector3::new(0.0, 1.0, 0.0);
 
 pub struct CameraData {
-    pub proj_view: Matrix4<f32>,
+    pub proj_view: Mat4,
 }
 
 pub struct FrameData {
@@ -145,7 +148,7 @@ impl Game {
         let mut game = Box::new(Game {
             world,
             camera,
-            player: Transform { pos: Point3::origin(), yaw: 0.0, pitch: 0.0 },
+            player: Transform { pos: vec3(0.0,70.0,0.0), yaw: 0.0, pitch: 0.0 },
             frame_tasks: vec![],
             core: core.clone(),
             descriptor_pool: DescriptorPool::new(core),
@@ -175,8 +178,8 @@ impl Game {
         render::renderpasses::prepare_render(self, &ar.renderpass).unwrap();
 
 
-        let proj_view = self.camera.proj(ar.renderpass.extends())
-            * Isometry3::look_at_rh(&self.player.pos, &(self.player.pos + self.player.direction()), &UP).to_homogeneous();
+        let proj_view = self.camera.proj(ar.renderpass.extends()) * Mat4::look_to_rh(self.player.pos, self.player.direction(), Vec3::Y);
+            // * Isometry3::look_at_rh(&self.player.pos, &(self.player.pos + self.player.direction()), &UP).to_homogeneous();
 
         self.world.insert(CameraData { proj_view });
 
@@ -228,7 +231,7 @@ fn handle_player_movement(world:&mut World,player_transform: &mut Transform, del
         }
     }
 
-    let mut move_vector = Vector3::<f32>::zeros();
+    let mut move_vector = Vec3::ZERO;
 
     move_vector.x += key_to_scaler(ar.get_key(Key::A));
     move_vector.x -= key_to_scaler(ar.get_key(Key::D));
@@ -237,10 +240,10 @@ fn handle_player_movement(world:&mut World,player_transform: &mut Transform, del
     move_vector.y += key_to_scaler(ar.get_key(Key::Space));
     move_vector.y -= key_to_scaler(ar.get_key(Key::LeftControl));
 
-    let forward = Vector3::new(player_transform.yaw.cos(), 0.0f32, player_transform.yaw.sin());
-    let right = Vector3::new(forward.z, 0.0, -forward.x); //90 degrees rotated clockwise
+    let forward = vec3(player_transform.yaw.cos(), 0.0f32, player_transform.yaw.sin());
+    let right = vec3(forward.z, 0.0, -forward.x); //90 degrees rotated clockwise
 
-    let final_vec = forward * move_vector.z + right * move_vector.x + Vector3::new(0.0, move_vector.y, 0.0);
+    let final_vec = forward * move_vector.z + right * move_vector.x + vec3(0.0, move_vector.y, 0.0);
 
     player_transform.pos += final_vec * delta_time as f32 * speed;
 
@@ -266,7 +269,7 @@ fn handle_player_movement(world:&mut World,player_transform: &mut Transform, del
         world.create_entity()
             .with(Transform::new(player_transform.pos.x, player_transform.pos.y, player_transform.pos.z))
             .with(Velocity::default())
-            .with(Collider{box_size:Vector3::new(1.0,2.0,1.0)})
+            .with(Collider{box_size:vec3(1.0,2.0,1.0)})
             .with(Cube)
             .build();
     }

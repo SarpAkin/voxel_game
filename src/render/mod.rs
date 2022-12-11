@@ -2,8 +2,7 @@ use std::sync::Arc;
 
 use ash::vk;
 use bytemuck::{Pod, Zeroable};
-use nalgebra::Matrix4;
-use nalgebra::Point3;
+use glam::*;
 use magma_renderer::auto_description;
 use magma_renderer::core::*;
 
@@ -68,10 +67,10 @@ fn create_pipeline(core: &Arc<Core>, renderpass: &dyn Renderpass) -> eyre::Resul
 }
 
 impl Mesh {
-    fn draw(&self, cmd: &mut CommandBuffer, mvp: &Matrix4<f32>) {
+    fn draw(&self, cmd: &mut CommandBuffer, mvp: &Mat4) {
         cmd.bind_pipeline(&self.metarial);
 
-        cmd.push_constant(&Push { mvp: mvp.data.0 }, vk::ShaderStageFlags::VERTEX, 0);
+        cmd.push_constant(&Push { mvp: mvp.to_cols_array_2d() }, vk::ShaderStageFlags::VERTEX, 0);
         // let v: Box<_> = self
         //     .verticies
         //     .get_data()
