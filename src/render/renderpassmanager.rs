@@ -162,4 +162,6 @@ impl<'a> SubpassRef<'a> {
     pub fn renderpass(&self) -> &dyn Renderpass {
         self.manager.renderpasses.get(self.subpass.renderpass_name).unwrap().get_renderpass()
     }
+
+    pub(crate) fn subpass_index(&self) -> u32 { self.subpass.subpass_index }
 }

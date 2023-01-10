@@ -1,0 +1,9 @@
+textures:
+  - res/voxel_tilemap.png
+shaders:
+  - res/chunk2.frag
+  - res/chunk2.vert
+
+vertex: "chunk_vertex"
+
+material_set: 2

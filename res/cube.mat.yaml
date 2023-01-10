@@ -1,0 +1,9 @@
+textures:
+  - res/voxel_tilemap.png
+shaders:
+  - res/cube.frag
+  - res/cube.vert
+
+vertex: "cube"
+
+material_set: 0

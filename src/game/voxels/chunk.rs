@@ -112,10 +112,6 @@ pub fn init(game: &mut Game) {
         }
     }
 
-    // worldgen.queue_chunk([1, 0, 1]);
-    // worldgen.queue_chunk([1, 0, 0]);
-    // worldgen.queue_chunk([0, 0, 0]);
-
     game.world.insert(Mutex::new(worldgen));
 
     game.insert_frame_task(Box::new(|w, d| {

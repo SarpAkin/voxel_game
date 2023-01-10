@@ -9,7 +9,7 @@ edition = "2021"
 magma_renderer = {path = "../vk_ash_engine"}
 ash = "0.37.0+1.3.209"
 eyre = "0.6.8"
-vk-shader-macros = "0.2.8"
+vk-shader-macros = "^0.2.8"
 bytemuck = {version="1.12.1", features = ["derive"]}
 specs = "0.18.0"
 # nalgebra = "0.31.2"

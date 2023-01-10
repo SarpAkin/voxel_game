@@ -7,6 +7,7 @@ use std::{
 };
 
 use ash::vk;
+use bytemuck::{Zeroable, Pod};
 use eyre::Result;
 use glam::*;
 use magma_renderer::{core::*, window::*};
@@ -113,9 +114,40 @@ pub struct Game {
     // gpass: DeferedPass,
 }
 
+#[repr(C)]
+#[derive(Debug,Clone, Copy,Pod,Zeroable)]
+pub struct CamareBuffer{
+    pub proj_view: [[f32;4];4],
+}
 
 pub struct CameraData {
     pub proj_view: Mat4,
+    cam_buffers:Box<[Buffer<CamareBuffer>]>,
+    pub dset:vk::DescriptorSet,
+    pub dset_layout:vk::DescriptorSetLayout,
+}
+
+impl CameraData{
+    pub fn new(core:&Arc<Core>) -> eyre::Result<CameraData>{
+        let camdata = Self{
+            proj_view: Mat4::IDENTITY,
+            cam_buffers: (0..2).map(|_| core.create_buffer(vk::BufferUsageFlags::UNIFORM_BUFFER, 1, true)).collect::<Result<_>>()?,
+            dset: vk::DescriptorSet::null(),
+            dset_layout: DescriptorSetLayoutBuilder::new().add_ubo(vk::ShaderStageFlags::VERTEX , 1).build(core)?,
+        };
+
+        Ok(camdata)
+    }
+
+    pub fn update_and_get_buffer_data(&mut self,frame_index:usize,pool:&mut DescriptorPool) -> eyre::Result<&mut CamareBuffer>{
+        let buffer = &mut self.cam_buffers[frame_index];
+
+        self.dset = DescriptorSetBuilder::new().add_ubo(&[buffer]).build(self.dset_layout, pool)?;
+
+        Ok(&mut buffer.get_data_mut().unwrap()[0])
+    }
+
+    // pub fn set_buffer_data(&mut self)
 }
 
 pub struct FrameData {
@@ -160,6 +192,7 @@ impl Game {
             frame_index: 0,
         });
 
+        render::init_material_system(&mut game);
         render::renderpasses::init(&mut game, renderpass);
 
         voxels::init(&mut game);
@@ -168,11 +201,15 @@ impl Game {
 
         physics::init(&mut game);
 
+        game.world.insert(CameraData::new(core).unwrap());
+
+
         game
     }
 
     pub fn tick(&mut self, delta_time: f64, cmd: &mut CommandBuffer, ar: &mut Window) -> Result<()> {
         self.world.insert(DeltaTime(delta_time));
+        self.world.insert(FrameIndex(ar.frame_index()));
         handle_player_movement(&mut self.world,&mut self.player, delta_time, ar);
 
         render::renderpasses::prepare_render(self, &ar.renderpass).unwrap();
@@ -181,9 +218,17 @@ impl Game {
         let proj_view = self.camera.proj(ar.renderpass.extends()) * Mat4::look_to_rh(self.player.pos, self.player.direction(), Vec3::Y);
             // * Isometry3::look_at_rh(&self.player.pos, &(self.player.pos + self.player.direction()), &UP).to_homogeneous();
 
-        self.world.insert(CameraData { proj_view });
-
         self.world.write_resource::<RenderGlobals>().start_frame()?;
+
+
+        let mut camdata = self.world.fetch_mut::<CameraData>();
+        camdata.proj_view= proj_view;
+        let cam_buffer = camdata.update_and_get_buffer_data(ar.frame_index(), &mut self.world.write_resource::<RenderGlobals>().frame_data().descriptor_pool.lock().unwrap())?;
+        cam_buffer.proj_view = proj_view.to_cols_array_2d();
+
+        drop(camdata);
+        // self.world.insert(CameraData { proj_view });
+
 
         //build the dispatcher
         let mut dbuilder = DispatcherBuilder::new();
@@ -277,4 +322,11 @@ fn handle_player_movement(world:&mut World,player_transform: &mut Transform, del
     // if final_vec != Vector3::zeros() {
     //     println!("move direction {}, final pos {:?}",final_vec,player_transform.pos)
     // }
+}
+
+pub struct FrameIndex(usize);
+
+impl FrameIndex
+{
+    pub fn index(&self) -> usize {self.0}
 }

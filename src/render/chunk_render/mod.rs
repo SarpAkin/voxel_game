@@ -1,10 +1,13 @@
 use crate::game::{voxels::*, Game};
 use bytemuck::{Pod, Zeroable};
-use specs::prelude::*;
 use magma_renderer::{auto_description, core::Renderpass};
+use specs::prelude::*;
 
+mod chunk_renderer;
 pub mod mesher;
-pub mod renderer;
+mod primative_manager;
+mod stencil_buffer;
+mod chunk_mesh_manager;
 
 auto_description!(
     #[repr(C)]
@@ -18,7 +21,7 @@ auto_description!(
 #[repr(C)]
 #[derive(Clone, Copy, Zeroable, Pod)]
 pub struct Quad {
-    verticies: [ChunkVertex; 4],
+    pub verticies: [ChunkVertex; 4],
 }
 
 pub enum Facing {
@@ -31,12 +34,14 @@ pub enum Facing {
 }
 
 pub fn init(game: &mut Game, renderpass: &dyn Renderpass) {
-    game.world.register::<renderer::ChunkMesh>();
-
-    renderer::register_render_data(game, renderpass).unwrap();
-
     game.insert_frame_task(Box::new(move |_w, d| {
-        d.add(mesher::ChunkMesher {}, "mesh chunks", &[]);
-        d.add(renderer::Renderer {}, "render chunks", &["mesh chunks"]);
-    }))
+        d.add(mesher::ChunkMesher {}, "chunk mesh", &[]);
+    }));
+
+    chunk_renderer::register_render_data(game).unwrap();
+}
+
+pub struct ChunkMesh {
+    pos: [i32; 3],
+    quads: Vec<Quad>,
 }

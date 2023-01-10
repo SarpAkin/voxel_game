@@ -4,15 +4,10 @@ mod game;
 mod render;
 mod util;
 
+
+
 fn main() -> eyre::Result<()>{
-    let a = 1.0f32 / 0.0f32;
-    let b = -1.0f32 / 0.0f32;
-    let c = 0.0f32 / 0.0f32;
-
-
-    println!("a:{a},b:{b},c:{c}");
-
-
+    // return magma_renderer::engine::material::test_serialization();
 
     let mut window = window::Window::new()?;
     let core = window.core.clone();
@@ -29,8 +24,6 @@ fn main() -> eyre::Result<()>{
     }
 
     println!("exiting");
-
-
 
     Ok(())
 }

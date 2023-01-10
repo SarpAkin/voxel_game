@@ -238,6 +238,8 @@ pub fn init(game: &mut Game) {
     game.world.register::<Collider>();
     game.world.register::<AddedForces>();
 
+    return;
+
     game.insert_frame_task(Box::new(|w, d| {
         d.add(ForceSystem, "forces", &[]);
         d.add(VelocitySystem, "velocities", &["forces"]);

@@ -10,6 +10,10 @@ pub mod chunk_render;
 mod cube;
 pub mod renderpassmanager;
 pub use cube::*;
+use magma_renderer::engine::material::MaterialID;
+use magma_renderer::engine::material::MaterialManager;
+
+use crate::game::Game;
 pub mod renderpasses;
 
 #[cfg(debug_assertions)]
@@ -39,7 +43,7 @@ auto_description!(
 pub struct Mesh {
     verticies: Buffer<MeshVertex>,
     indicies: Buffer<u16>,
-    metarial: Arc<Pipeline>,
+    material_id: MaterialID,
 }
 
 #[repr(C)]
@@ -67,8 +71,8 @@ fn create_pipeline(core: &Arc<Core>, renderpass: &dyn Renderpass) -> eyre::Resul
 }
 
 impl Mesh {
-    fn draw(&self, cmd: &mut CommandBuffer, mvp: &Mat4) {
-        cmd.bind_pipeline(&self.metarial);
+    fn draw(&self, cmd: &mut CommandBuffer, mvp: &Mat4, material_manager: &MaterialManager) {
+        cmd.bind_material(&material_manager.get_material(self.material_id).unwrap());
 
         cmd.push_constant(&Push { mvp: mvp.to_cols_array_2d() }, vk::ShaderStageFlags::VERTEX, 0);
         // let v: Box<_> = self
@@ -89,4 +93,30 @@ impl Mesh {
             // d.cmd_draw(c, 6, 1, 0, 0);
         }
     }
+}
+
+#[repr(C)]
+#[derive(Pod, Clone, Copy, Zeroable)]
+pub struct VkDrawIndexedIndirectCommand {
+    pub index_count: u32,
+    pub instance_count: u32,
+    pub first_index: u32,
+    pub vertex_offset: i32,
+    pub first_instance: u32,
+}
+
+unsafe fn foo(core: &Arc<Core>) {
+
+    // core.device().cmd_draw_indexed_indirect_count(command_buffer, buffer, offset, count_buffer, count_buffer_offset, max_draw_count, stride)
+}
+
+pub fn init_material_system(game: &mut Game) {
+    use magma_renderer::engine::material::*;
+
+    let core = &game.core;
+    let material_system = MaterialManager::new(core).unwrap();
+
+
+
+    game.world.insert(material_system);
 }

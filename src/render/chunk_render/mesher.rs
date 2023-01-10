@@ -1,10 +1,12 @@
 use std::sync::Arc;
 
+use crate::game::FrameIndex;
+
 use super::*;
 
 use ash::vk;
-use specs::prelude::*;
 use magma_renderer::core::CommandBuffer;
+use specs::prelude::*;
 
 pub struct ChunkMesher {}
 
@@ -36,47 +38,47 @@ impl ChunkMesher {
 
         let verticies = match facing {
             Facing::XP => [
-                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz - 0.0], uv:uvs[0] },
-                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz - 0.0], uv:uvs[1] },
-                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz + 1.0], uv:uvs[2] },
-                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz + 1.0], uv:uvs[3] },
+                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz - 0.0], uv: uvs[0] },
+                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz - 0.0], uv: uvs[1] },
+                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz + 1.0], uv: uvs[2] },
+                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz + 1.0], uv: uvs[3] },
             ],
             Facing::XN => [
-                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz - 0.0], uv:uvs[0] },
-                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz + 1.0], uv:uvs[1] },
-                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz - 0.0], uv:uvs[2] },
-                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz + 1.0], uv:uvs[3] },
+                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz - 0.0], uv: uvs[0] },
+                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz + 1.0], uv: uvs[1] },
+                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz - 0.0], uv: uvs[2] },
+                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz + 1.0], uv: uvs[3] },
             ],
             Facing::YP => [
-                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz - 0.0], uv:uvs[0] },
-                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz + 1.0], uv:uvs[1] },
-                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz - 0.0], uv:uvs[2] },
-                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz + 1.0], uv:uvs[3] },
+                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz - 0.0], uv: uvs[0] },
+                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz + 1.0], uv: uvs[1] },
+                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz - 0.0], uv: uvs[2] },
+                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz + 1.0], uv: uvs[3] },
             ],
             Facing::YN => [
-                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz - 0.0], uv:uvs[0] },
-                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz - 0.0], uv:uvs[1] },
-                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz + 1.0], uv:uvs[2] },
-                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz + 1.0], uv:uvs[3] },
+                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz - 0.0], uv: uvs[0] },
+                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz - 0.0], uv: uvs[1] },
+                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz + 1.0], uv: uvs[2] },
+                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz + 1.0], uv: uvs[3] },
             ],
             Facing::ZP => [
-                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz + 1.0], uv:uvs[0] },
-                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz + 1.0], uv:uvs[1] },
-                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz + 1.0], uv:uvs[2] },
-                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz + 1.0], uv:uvs[3] },
+                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz + 1.0], uv: uvs[0] },
+                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz + 1.0], uv: uvs[1] },
+                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz + 1.0], uv: uvs[2] },
+                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz + 1.0], uv: uvs[3] },
             ],
             Facing::ZN => [
-                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz - 0.0], uv:uvs[0] },
-                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz - 0.0], uv:uvs[1] },
-                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz - 0.0], uv:uvs[2] },
-                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz - 0.0], uv:uvs[3] },
+                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz - 0.0], uv: uvs[0] },
+                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz - 0.0], uv: uvs[1] },
+                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz - 0.0], uv: uvs[2] },
+                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz - 0.0], uv: uvs[3] },
             ],
         };
 
         Quad { verticies }
     }
 
-    pub fn mesh_chunk(&self, voxelworld: &VoxelWorld, chunkpos: &[i32; 3]) -> Vec<Quad> {
+    pub fn mesh_chunk(&self, voxelworld: &VoxelWorld, chunkpos: &[i32; 3]) -> ChunkMesh {
         let [cx, cy, cz] = *chunkpos;
 
         let chunk = voxelworld.get_chunk(chunkpos).unwrap_or(ChunkRef::empty());
@@ -128,8 +130,12 @@ impl ChunkMesher {
             }
         }
 
-        quads
+        ChunkMesh { pos: *chunkpos, quads }
     }
+}
+
+impl ChunkMesh {
+    fn empty(&self) -> bool { self.quads.len() == 0 }
 }
 
 impl<'a> System<'a> for ChunkMesher {
@@ -138,39 +144,31 @@ impl<'a> System<'a> for ChunkMesher {
         ReadExpect<'a, crate::render::renderpassmanager::RenderPassManager>,
         ReadStorage<'a, ChunkComponent>,
         ReadStorage<'a, ModifiedChunk>,
-        WriteStorage<'a, renderer::ChunkMesh>,
+        WriteExpect<'a, super::chunk_mesh_manager::ChunkMeshManager>,
+        ReadExpect<'a, FrameIndex>,
         Entities<'a>,
     );
 
-    fn run(&mut self, (vworld, rpman, chunk, modifiedf, mut meshes, entities): Self::SystemData) {
-        let mut expired_meshes = Vec::new();
+    fn run(&mut self, (vworld, rpman, chunk, modifiedf, mut mesh_man, frame_index, entities): Self::SystemData) {
+        // let mut expired_meshes = Vec::new();
         let mut cmd = CommandBuffer::new_secondry(rpman.core());
         cmd.begin_secondry(None).unwrap();
 
-        for (chunk, _, entity) in (&chunk, &modifiedf, &entities).join() {
-            let mesh = self.mesh_chunk(&*vworld, &chunk.chunkpos);
+        let meshes = (&chunk, &modifiedf, &entities)
+            .par_join()
+            .filter_map(|(chunk, _, entity)| {
+                let mesh = self.mesh_chunk(&*vworld, &chunk.chunkpos);
+                if mesh.empty() {
+                    return None;
+                }
+                Some(mesh)
+            })
+            .collect();
 
-            let old = if mesh.len() == 0 {
-                meshes.remove(entity)
-            } else {
-                meshes
-                    .insert(
-                        entity,
-                        renderer::ChunkMesh {
-                            verticies: cmd
-                                .gpu_buffer_from_data(bytemuck::cast_slice(&mesh), vk::BufferUsageFlags::VERTEX_BUFFER)
-                                .unwrap(),
-                        },
-                    )
-                    .unwrap()
-            };
+        mesh_man.submit_meshes(meshes);
+        mesh_man.flush_stencil(&mut cmd, frame_index.index());
 
-            if let Some(old) = old {
-                expired_meshes.push(old);
-            }
-        }
-
-        cmd.add_dependency(&Arc::new(expired_meshes));
+        // cmd.add_dependency(&Arc::new(expired_meshes));
         cmd.end().unwrap();
         rpman.submit_compute(cmd);
     }

@@ -1,0 +1,99 @@
+#version 450 
+
+layout (local_size_x = 128) in;
+layout (local_size_y = 1) in;
+
+struct Chunk{
+    ivec3 pos;
+    uint flags;
+};
+
+layout(std430,set = 0,binding = 0) readonly buffer ChunkData {
+    Chunk chunks[];
+};
+
+layout(std430,set = 0,binding = 1) readonly buffer PrimativeBatchDatas{
+    uvec2 batches[];
+} batch_datas[1];
+
+
+struct IndirectDraw
+{
+    uint index_count;
+    uint instance_count;
+    uint first_index;
+    int  vertex_offset;
+    uint first_instance;
+};
+
+layout(std430,set = 0,binding = 2) writeonly buffer IndirectDraw_{
+    IndirectDraw indirect_draw_buffer[];
+};
+
+struct DrawParameters{
+    vec3 relative_pos;
+    float padding;
+};
+
+// layout(std430,set = 0,binding = 3) writeonly buffer ParameterBuffer{
+//     DrawParameters draw_parameters[];
+// };
+
+layout(std430,set = 0,binding = 3) buffer DrawCounterBuffer{
+    uint draw_counters[];
+};
+
+layout(std430,set = 0,binding = 4) readonly buffer DrawOffsetBuffer{
+    uint draw_offsets[];
+};
+            // .add_ssbo(&[&mesh_manager.chunk_buffer])
+            // .add_ssbo(&[mesh_manager.opaque_meshes.get_batch_descriptions()])
+            // .add_ssbo(&[&self.indirect_draw_buffer])
+            // .add_ssbo(&[&self.draw_parameter_buffer])
+            // .add_ssbo(&[&self.draw_count_buffer])
+            // .add_ssbo(&[&self.framely_data[frame_index].draw_offset_buffer])
+
+layout(push_constant) uniform Push{
+    uint chunk_count;
+};
+
+uint chunk_id;
+vec3 chunk_world_pos;
+
+bool is_culled(){
+    return false;
+}
+
+void insert_primative_draw(uint primative_type){
+    uvec2 compressed_batch_data = batch_datas[primative_type].batches[chunk_id];
+    if (compressed_batch_data.y == 0) return;
+
+    uint primative_offset = compressed_batch_data.x;
+    uint primative_count = compressed_batch_data.y & 0xFFFFFF;
+    uint primative_pool = compressed_batch_data.y >> 24;
+
+    uint draw_counter_index = primative_type * 256 + primative_pool;
+    uint draw_index = atomicAdd(draw_counters[draw_counter_index],1) + draw_offsets[draw_counter_index];
+
+    IndirectDraw draw;
+    draw.index_count = primative_count * 6;
+    draw.vertex_offset = int(primative_offset * 4);
+    draw.instance_count = 1;
+    draw.first_instance = chunk_id;
+    draw.first_index = 0;
+
+    indirect_draw_buffer[draw_index] = draw;
+}
+
+void main(){
+    chunk_id = gl_GlobalInvocationID.x;
+
+    if(chunk_id >= chunk_count) return;
+
+    Chunk chunk = chunks[chunk_id];
+    chunk_world_pos = vec3(chunk.pos) * 32.0;
+
+    if(is_culled()) return;
+
+    insert_primative_draw(0);
+}
