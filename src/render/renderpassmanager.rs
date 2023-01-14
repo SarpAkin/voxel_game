@@ -138,7 +138,11 @@ impl RenderPassManager {
     }
 
     pub fn get_subpass(&self, subpass_name: &'static str) -> Option<SubpassRef> {
-        self.subpasses.get(subpass_name).and_then(|s| Some(SubpassRef { manager: self, subpass: s }))
+        self.subpasses.get(subpass_name).map(|s| (SubpassRef { manager: self, subpass: s }))
+    }
+
+    pub fn iter_subpasses(&self) -> impl Iterator<Item = (&str,SubpassRef)> {
+        self.subpasses.iter().map(|(name, subpass)| (*name,SubpassRef { manager: self, subpass }))
     }
 }
 

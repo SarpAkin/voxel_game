@@ -156,7 +156,7 @@ impl<'a> System<'a> for ChunkMesher {
 
         let meshes = (&chunk, &modifiedf, &entities)
             .par_join()
-            .filter_map(|(chunk, _, entity)| {
+            .filter_map(|(chunk, _, _entity)| {
                 let mesh = self.mesh_chunk(&*vworld, &chunk.chunkpos);
                 if mesh.empty() {
                     return None;

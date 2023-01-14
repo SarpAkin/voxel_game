@@ -65,7 +65,8 @@ fn create_pipeline(core: &Arc<Core>, renderpass: &dyn Renderpass) -> eyre::Resul
         .set_depth_testing(true)
         .set_topology(vk::PrimitiveTopology::TRIANGLE_LIST)
         .set_vertex_description(MeshVertex::get_desciption())
-        .build(core, renderpass, 0)?;
+        .set_render_target(renderpass.get_subpasses()[0].get_render_target())
+        .build(core)?;
 
     Ok(pipeline)
 }
@@ -115,8 +116,6 @@ pub fn init_material_system(game: &mut Game) {
 
     let core = &game.core;
     let material_system = MaterialManager::new(core).unwrap();
-
-
 
     game.world.insert(material_system);
 }

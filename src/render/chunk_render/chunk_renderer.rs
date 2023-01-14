@@ -324,8 +324,6 @@ mod render_system {
                 material_manager.load_material(
                     &mut cmd,
                     "res/chunk.mat.yaml".into(),
-                    gpass.renderpass(),
-                    gpass.subpass_index(),
                 )?,
             );
 

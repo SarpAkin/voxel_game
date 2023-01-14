@@ -96,7 +96,7 @@ pub fn init_cube(game: &mut Game) -> eyre::Result<()> {
 
         let mesh = Arc::new(create_cube_mesh(
             &game.core,
-            material_system.load_material(&mut cmd, "res/cube.mat.yaml".into(), rp.renderpass(), rp.subpass_index())?,
+            material_system.load_material(&mut cmd, "res/cube.mat.yaml".into())?,
         )?);
 
         cmd.end()?;

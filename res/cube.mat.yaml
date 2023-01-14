@@ -7,3 +7,5 @@ shaders:
 vertex: "cube"
 
 material_set: 0
+
+subpass: "gpass"

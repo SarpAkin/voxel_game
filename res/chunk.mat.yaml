@@ -7,3 +7,5 @@ shaders:
 vertex: "chunk_vertex"
 
 material_set: 2
+
+subpass: "gpass"

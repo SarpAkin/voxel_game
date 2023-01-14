@@ -1,5 +1,5 @@
 use ash::vk;
-use magma_renderer::core::*;
+use magma_renderer::{core::*, engine::material::MaterialManager};
 use std::{ops::DerefMut, sync::Arc};
 
 use crate::{
@@ -64,7 +64,8 @@ impl DeferedPass {
                 vk::ShaderStageFlags::FRAGMENT,
                 &ShaderModule::new(core, include_glsl!("res/final.frag"))?.module(),
             )
-            .build(core, rp, 0)?;
+            .set_render_target(rp.get_subpasses()[0].get_render_target())
+            .build(core)?;
 
         Ok((pipeline, dset_layout))
     }
@@ -79,13 +80,13 @@ impl DeferedPass {
         );
     }
 
-    fn render_to_swapchain(&self,cmd: &mut CommandBuffer,game:&Game)-> eyre::Result<()>{
+    fn render_to_swapchain(&self, cmd: &mut CommandBuffer, game: &Game) -> eyre::Result<()> {
         let image = self.renderpass.get_attachment(self.albedo_spec);
         let dset = DescriptorSetBuilder::new().add_sampled_image(image, *self.sampler).build(
             self.dset_layout,
             game.world.fetch::<RenderGlobals>().frame_data().descriptor_pool.lock().unwrap().deref_mut(),
         )?;
-    
+
         cmd.bind_pipeline(&self.pipeline);
         cmd.bind_descriptor_set(0, dset);
         unsafe {
@@ -101,17 +102,22 @@ pub fn init(game: &mut Game, rp: &dyn Renderpass) {
 
     DeferedPass::new(&game.core, rp).register(&mut man, game);
 
-    // let gpass = crate::game::DeferedPass::new(&game.core, rp.extends());
-    // gpass.register(&man,game);
+    {
+        let mut mat_man = game.world.fetch_mut::<MaterialManager>();
+        // mat_man.set_subpass(subpass_name, subpass)
+        for (name, subpass) in man.iter_subpasses() {
+            mat_man.set_subpass(name.to_string(), &subpass.renderpass().get_subpasses()[subpass.subpass_index() as usize]);
+        }
+    }
 
     game.world.insert(man);
 }
 
-pub fn prepare_render(game: &mut Game,rp:&dyn Renderpass) -> eyre::Result<()>{
+pub fn prepare_render(game: &mut Game, rp: &dyn Renderpass) -> eyre::Result<()> {
     let mut man = game.world.fetch_mut::<RenderPassManager>();
     let deferred_renderer = man.get_renderpass::<DeferedPass>("deferred_render").unwrap();
     if deferred_renderer.renderpass.extends() != rp.extends() {
-        let (width,height) = rp.extends();
+        let (width, height) = rp.extends();
         deferred_renderer.renderpass.resize(width, height)?;
     }
 
@@ -133,4 +139,3 @@ pub fn render(game: &mut Game, cmd: &mut CommandBuffer, rp: &dyn Renderpass) -> 
 
     Ok(())
 }
-
