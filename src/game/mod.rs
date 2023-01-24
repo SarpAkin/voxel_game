@@ -10,14 +10,14 @@ use ash::vk;
 use bytemuck::{Zeroable, Pod};
 use eyre::Result;
 use glam::*;
-use magma_renderer::{core::*, window::*};
+use magma_renderer::{core::*, window::*, engine::renderer::MeshPass};
 use specs::prelude::*;
 use std::sync::mpsc::channel;
 
 pub mod voxels;
 pub mod physics;
 
-use crate::{game::physics::{Velocity, Collider}, render::Cube};
+use crate::{game::physics::{Velocity, Collider}, render::CubePrefab};
 
 use self::voxels::VoxelWorld;
 
@@ -145,6 +145,14 @@ impl CameraData{
         self.dset = DescriptorSetBuilder::new().add_ubo(&[buffer]).build(self.dset_layout, pool)?;
 
         Ok(&mut buffer.get_data_mut().unwrap()[0])
+    }
+
+
+    pub fn get_meshpass(&self) -> MeshPass {
+        MeshPass{
+            proj_view: self.proj_view,
+            scene_buffer: self.dset,
+        }
     }
 
     // pub fn set_buffer_data(&mut self)
@@ -292,10 +300,7 @@ fn handle_player_movement(world:&mut World,player_transform: &mut Transform, del
 
     player_transform.pos += final_vec * delta_time as f32 * speed;
 
-
     struct TimeSincelastBox(f32);
-
-    
 
     if ar.get_key(Key::G) == InputState::Pressed{
         if let Some(time) = world.get_mut::<TimeSincelastBox>() {
@@ -311,11 +316,14 @@ fn handle_player_movement(world:&mut World,player_transform: &mut Transform, del
             world.insert(TimeSincelastBox(0.0));
         }
 
+        let cube_prefab = world.fetch::<CubePrefab>().0.clone();
+
         world.create_entity()
             .with(Transform::new(player_transform.pos.x, player_transform.pos.y, player_transform.pos.z))
             .with(Velocity::default())
-            .with(Collider{box_size:vec3(1.0,2.0,1.0)})
-            .with(Cube)
+            .with(Collider{box_size:vec3(1.0,1.0,1.0)})
+            // .with(Cube)
+            .with(cube_prefab)
             .build();
     }
 

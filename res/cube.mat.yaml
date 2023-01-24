@@ -4,8 +4,8 @@ shaders:
   - res/cube.frag
   - res/cube.vert
 
-vertex: "cube"
+vertex: [Position]
 
-material_set: 0
+material_set: 1
 
-subpass: "gpass"
+subpass: gpass

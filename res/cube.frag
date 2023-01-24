@@ -5,7 +5,7 @@ layout (location = 0) in vec3 fcolor;
 layout (location = 0) out vec4 albedo;
 layout (location = 1) out vec4 normal;
 
-layout(set = 0,binding = 0) uniform sampler2D samplers[];
+layout(set = 1,binding = 0) uniform sampler2D samplers[];
 
 void main()
 {

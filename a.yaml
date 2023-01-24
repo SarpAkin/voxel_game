@@ -1,0 +1,6 @@
+textures: []
+shaders: []
+vertex:
+- Postion
+material_set: null
+subpass: ''

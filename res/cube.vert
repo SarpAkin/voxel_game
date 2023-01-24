@@ -9,6 +9,10 @@ layout(push_constant) uniform Push{
     mat4 mvp;
 };
 
+layout(set = 0,binding = 0) uniform CamBuffer{
+    mat4 proj_view;
+};
+
 
 void main() {
 

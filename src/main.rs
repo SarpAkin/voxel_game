@@ -7,7 +7,8 @@ mod util;
 
 
 fn main() -> eyre::Result<()>{
-    // return magma_renderer::engine::material::test_serialization();
+    // magma_renderer::engine::material::foo();
+    // return Ok(());
 
     let mut window = window::Window::new()?;
     let core = window.core.clone();

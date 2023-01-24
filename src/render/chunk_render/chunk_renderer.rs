@@ -75,7 +75,7 @@ impl ChunkRenderManager {
                 false,
             )?;
 
-            compute_cmd.add_dependency(&Arc::new(std::mem::replace(&mut self.indirect_draw_buffer, new_buffer)));
+            compute_cmd.add_dependency(std::mem::replace(&mut self.indirect_draw_buffer, new_buffer));
 
             // println!("resized indirect draw buffer to {}",self.indirect_draw_buffer.size());
         }
@@ -180,11 +180,11 @@ impl ChunkRenderManager {
         cmd.begin()?;
 
         let shared_data = ChunkRenderSharedData {
-            quad_index_buffer: cmd.gpu_buffer_from_data(
+            quad_index_buffer: cmd.gpu_buffer_from_slice(
+                vk::BufferUsageFlags::INDEX_BUFFER,
                 &(0..16384)
                     .flat_map(|i| [i * 4 + 0, i * 4 + 1, i * 4 + 2, i * 4 + 2, i * 4 + 1, i * 4 + 3])
                     .collect::<Vec<u16>>(),
-                vk::BufferUsageFlags::INDEX_BUFFER,
             )?,
             cull_pipeline: material_manager.compile_compute_shader("res/chunk_cull.comp")?.0,
         };

@@ -4,8 +4,8 @@ shaders:
   - res/chunk2.frag
   - res/chunk2.vert
 
-vertex: "chunk_vertex"
+vertex: chunk_vertex
 
 material_set: 2
 
-subpass: "gpass"
+subpass: gpass
