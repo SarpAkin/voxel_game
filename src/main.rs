@@ -1,3 +1,5 @@
+use std::any::Any;
+
 use magma_renderer::{window,core::*};
 
 mod game;
@@ -25,6 +27,9 @@ fn main() -> eyre::Result<()>{
     }
 
     println!("exiting");
+
+    let a = &game.world as &dyn Any;
+    
 
     Ok(())
 }

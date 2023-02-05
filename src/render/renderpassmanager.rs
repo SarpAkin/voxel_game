@@ -147,25 +147,25 @@ impl RenderPassManager {
 }
 
 impl<'a> SubpassRef<'a> {
-    pub fn new_cmd(&self) -> eyre::Result<CommandBuffer> {
-        let renderpass = self.manager.renderpasses.get(self.subpass.renderpass_name).unwrap();
+        pub fn new_cmd(&self) -> eyre::Result<CommandBuffer> {
+            let renderpass = self.manager.renderpasses.get(self.subpass.renderpass_name).unwrap();
 
-        let mut cmd = renderpass.get_renderpass().core().new_secondry_cmd();
+            let mut cmd = renderpass.get_renderpass().core().new_secondry_cmd();
 
-        cmd.begin_secondry(Some((renderpass.get_renderpass(), self.subpass.subpass_index)))?;
+            cmd.begin_secondry(Some((renderpass.get_renderpass(), self.subpass.subpass_index)))?;
 
-        Ok(cmd)
-    }
+            Ok(cmd)
+        }
 
-    pub fn submit_cmd(&self, cmd: CommandBuffer) -> eyre::Result<()> {
-        cmd.end()?;
-        self.subpass.sender.lock().unwrap().send(cmd)?;
-        Ok(())
-    }
+        pub fn submit_cmd(&self, mut cmd: CommandBuffer) -> eyre::Result<()> {
+            cmd.end()?;
+            self.subpass.sender.lock().unwrap().send(cmd)?;
+            Ok(())
+        }
 
-    pub fn renderpass(&self) -> &dyn Renderpass {
-        self.manager.renderpasses.get(self.subpass.renderpass_name).unwrap().get_renderpass()
-    }
+        pub fn renderpass(&self) -> &dyn Renderpass {
+            self.manager.renderpasses.get(self.subpass.renderpass_name).unwrap().get_renderpass()
+        }
 
-    pub(crate) fn subpass_index(&self) -> u32 { self.subpass.subpass_index }
+        pub(crate) fn subpass_index(&self) -> u32 { self.subpass.subpass_index }
 }

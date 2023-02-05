@@ -8,74 +8,52 @@ use ash::vk;
 use magma_renderer::core::CommandBuffer;
 use specs::prelude::*;
 
+/* Quad Storage 2x32 bits
+
+    // u32-0
+    x y z 5x3 bits 0-15
+    facing direction 3 bits 15-18
+    material 14 bits 18-32
+
+    // u32-1
+    // reserved for future
+
+*/
+
+#[repr(C)]
+#[derive(Clone, Copy, Zeroable, Pod)]
+pub struct Quad {
+    // pub verticies: [ChunkVertex; 4],
+    pub data: [u32;2],
+}
+
 pub struct ChunkMesher {}
 
 impl ChunkMesher {
     // fn new_quad(&self, tile: Tile, sx: u32, sy: u32, sz: u32, ex: u32, ey: u32, ez: u32) -> Quad { todo!() }
     fn new_quad(&self, tile: Tile, x: usize, y: usize, z: usize, facing: Facing) -> Quad {
-        let color = match facing {
-            Facing::XP => 0xFF,
-            Facing::XN => 0xFF,
-            Facing::YP => 0xFF_00,
-            Facing::YN => 0xFF_00,
-            Facing::ZP => 0xFF_00_00,
-            Facing::ZN => 0xFF_00_00,
+        let mut data_0 = 0u32;
+
+        assert!(x < 32);
+        assert!(y < 32);
+        assert!(z < 32);
+
+        data_0 |= (x as u32) | ((y as u32) << 5) | ((z as u32) << 10); // position
+
+        let facing_bits = match facing {
+            Facing::XP => 0,
+            Facing::XN => 1,
+            Facing::YP => 2,
+            Facing::YN => 3,
+            Facing::ZP => 4,
+            Facing::ZN => 5,
         };
 
-        let mx = x as f32;
-        let my = y as f32;
-        let mz = z as f32;
+        data_0 |= facing_bits << 15; //facing direction
 
-        let base_cord = tile.0 as f32 / 16.0;
-        let tile_size = 1.0 / 16.0;
+        data_0 |= (tile.0 as u32) << 18; // material
 
-        let uvs = [
-            [base_cord, 0.0], //
-            [base_cord + tile_size, 0.0],
-            [base_cord, 1.0],
-            [base_cord + tile_size, 1.0],
-        ];
-
-        let verticies = match facing {
-            Facing::XP => [
-                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz - 0.0], uv: uvs[0] },
-                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz - 0.0], uv: uvs[1] },
-                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz + 1.0], uv: uvs[2] },
-                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz + 1.0], uv: uvs[3] },
-            ],
-            Facing::XN => [
-                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz - 0.0], uv: uvs[0] },
-                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz + 1.0], uv: uvs[1] },
-                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz - 0.0], uv: uvs[2] },
-                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz + 1.0], uv: uvs[3] },
-            ],
-            Facing::YP => [
-                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz - 0.0], uv: uvs[0] },
-                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz + 1.0], uv: uvs[1] },
-                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz - 0.0], uv: uvs[2] },
-                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz + 1.0], uv: uvs[3] },
-            ],
-            Facing::YN => [
-                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz - 0.0], uv: uvs[0] },
-                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz - 0.0], uv: uvs[1] },
-                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz + 1.0], uv: uvs[2] },
-                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz + 1.0], uv: uvs[3] },
-            ],
-            Facing::ZP => [
-                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz + 1.0], uv: uvs[0] },
-                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz + 1.0], uv: uvs[1] },
-                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz + 1.0], uv: uvs[2] },
-                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz + 1.0], uv: uvs[3] },
-            ],
-            Facing::ZN => [
-                ChunkVertex { pos: [mx - 0.0, my - 0.0, mz - 0.0], uv: uvs[0] },
-                ChunkVertex { pos: [mx - 0.0, my + 1.0, mz - 0.0], uv: uvs[1] },
-                ChunkVertex { pos: [mx + 1.0, my - 0.0, mz - 0.0], uv: uvs[2] },
-                ChunkVertex { pos: [mx + 1.0, my + 1.0, mz - 0.0], uv: uvs[3] },
-            ],
-        };
-
-        Quad { verticies }
+        Quad { data: [data_0,0] }
     }
 
     pub fn mesh_chunk(&self, voxelworld: &VoxelWorld, chunkpos: &[i32; 3]) -> ChunkMesh {

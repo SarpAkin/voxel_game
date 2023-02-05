@@ -147,7 +147,7 @@ impl ChunkMeshManager {
                 std::mem::size_of::<Quad>() as u32,
                 128_000,
                 cap,
-                vk::BufferUsageFlags::TRANSFER_DST | vk::BufferUsageFlags::VERTEX_BUFFER,
+                vk::BufferUsageFlags::TRANSFER_DST | vk::BufferUsageFlags::VERTEX_BUFFER | vk::BufferUsageFlags::STORAGE_BUFFER,
             )?,
             stencil_buffers: (0..2).map(|_| StencilBuffer::new(core, 10_000_000)).collect::<eyre::Result<_>>()?,
             queued_meshes: Vec::new(),

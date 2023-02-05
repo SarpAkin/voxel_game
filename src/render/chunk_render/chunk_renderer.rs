@@ -221,7 +221,7 @@ impl ChunkRenderManager {
             // let push = PushConstant { multi_draw_offset };
             // draw_cmd.push_constant(&push, vk::ShaderStageFlags::VERTEX, 0);
 
-            if false {
+            if true  {
                 let set = DescriptorSetBuilder::new()
                     .add_ssbo(&[pool.get_primative_buffer()])
                     .build(material.pipeline().get_descriptor_set_layout(3).unwrap(), descriptor_pool)?;

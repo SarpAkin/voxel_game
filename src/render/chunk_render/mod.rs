@@ -18,11 +18,7 @@ auto_description!(
     }
 );
 
-#[repr(C)]
-#[derive(Clone, Copy, Zeroable, Pod)]
-pub struct Quad {
-    pub verticies: [ChunkVertex; 4],
-}
+pub use mesher::Quad;
 
 pub enum Facing {
     XP,
