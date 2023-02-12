@@ -20,7 +20,7 @@ auto_description!(
 
 pub use mesher::Quad;
 
-pub enum Facing {
+pub enum Direction {
     XP,
     XN,
     YP,

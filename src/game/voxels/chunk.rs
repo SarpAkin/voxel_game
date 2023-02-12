@@ -136,3 +136,66 @@ impl<'a> System<'a> for ClearModified {
 
     fn run(&mut self, mut data: Self::SystemData) { data.clear(); }
 }
+
+pub struct ChunkView<'a> {
+    chunks: Vec<ChunkRef<'a>>,
+    grid_size_x: u32,
+    grid_size_xy: u32, //grid size x * y
+    pub offsets: [i32; 3],
+}
+
+impl<'a> ChunkView<'a> {
+    pub fn get_tile(&self, x: i32, y: i32, z: i32) -> Tile {
+        let x = (x + self.offsets[0]) as usize;
+        let y = (y + self.offsets[1]) as usize;
+        let z = (z + self.offsets[2]) as usize;
+
+        let chunk_x = x / CHUNK_SIZE;
+        let chunk_y = y / CHUNK_SIZE;
+        let chunk_z = z / CHUNK_SIZE;
+
+        let chunk_index = chunk_x + (chunk_y * self.grid_size_x as usize) + chunk_z * (self.grid_size_xy as usize);
+
+        let chunk = &self.chunks[chunk_index];
+        chunk.get_block(x % CHUNK_SIZE, y % CHUNK_SIZE, z % CHUNK_SIZE)
+    }
+}
+
+pub fn world_pos_to_chunkpos(worldpos: [i32; 3]) -> [i32; 3] {
+    fn per_component(n: i32) -> i32 {
+        let mut cn = n / (CHUNK_SIZE as i32);
+        if n < 0 {
+            cn -= 1;
+        }
+        cn
+    }
+    [per_component(worldpos[0]), per_component(worldpos[1]), per_component(worldpos[2])]
+}
+
+impl VoxelWorld {
+    pub fn get_chunk_view<'a>(&'a self, start: [i32; 3], end: [i32; 3]) -> ChunkView<'a> {
+        let start_x = i32::min(start[0], end[0]);
+        let start_y = i32::min(start[1], end[1]);
+        let start_z = i32::min(start[2], end[2]);
+        let end_x = i32::max(start[0], end[0]);
+        let end_y = i32::max(start[1], end[1]);
+        let end_z = i32::max(start[2], end[2]);
+
+        let grid_size_x = (end_x - start_x + 1) as u32;
+        let grid_size_xy = grid_size_x * ((end_y - start_y + 1) as u32);
+        
+        let mut chunks = Vec::with_capacity(grid_size_xy as usize * (end_z - start_z + 1) as usize);
+
+        for cz in start_z..=end_z {
+            for cy in start_y..=end_y {
+                for cx in start_x..=end_x {
+                    let chunk_pos = [cx, cy, cz];
+                    let chunk = self.get_chunk(&chunk_pos).unwrap_or_else(|| ChunkRef::empty());
+                    chunks.push(chunk);
+                }
+            }
+        }
+
+        ChunkView { chunks, grid_size_x, grid_size_xy, offsets: [0; 3] }
+    }
+}
